@@ -1,0 +1,17 @@
+server:
+  port: 8082
+#  ssl:
+#    enabled: true
+#    key-store: classpath:certificate.p12
+#    key-store-password: 1234
+#    key-store-type: PKCS12
+spring:
+  jpa:
+    show-sql: true
+    database: mysql
+    properties:
+      hibernate:
+        format_sql: true
+  config:
+    import: "classpath:application-db.yml"
+

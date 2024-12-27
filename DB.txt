@@ -1,0 +1,299 @@
+use tripdb;
+
+DROP TABLE IF EXISTS local_advice;
+DROP TABLE IF EXISTS advice_place;
+DROP TABLE IF EXISTS advice_entire;
+DROP TABLE IF EXISTS trip_note;
+DROP TABLE IF EXISTS to_payment;
+DROP TABLE IF EXISTS from_payment;
+DROP TABLE IF EXISTS location_favorite;
+DROP TABLE IF EXISTS post_favorite;
+DROP TABLE IF EXISTS checklist_item;
+DROP TABLE IF EXISTS checklist_category;
+DROP TABLE IF EXISTS participate_members;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS posts;
+DROP TABLE IF EXISTS trip_day_location;
+DROP TABLE IF EXISTS expense;
+DROP TABLE IF EXISTS trip;
+DROP TABLE IF EXISTS chat_room;
+DROP TABLE IF EXISTS user_alarm;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS location;
+
+
+-- 유저
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nickname VARCHAR(50),
+    user_id VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    user_role VARCHAR(50) NOT NULL,
+    profile_pic VARCHAR(255),
+    local_area VARCHAR(255),
+    local_area_auth_date TIMESTAMP, -- 현지인 인증날짜,
+    own_badge TINYINT NOT NULL, -- 0 없음 1 있음
+    status TINYINT NOT NULL, -- 0 비활성 1 활성
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    inactive_at TIMESTAMP 
+    
+    # selected_count INT, -- 채택수
+) ENGINE=INNODB COMMENT '사용자';
+
+INSERT INTO users (nickname, user_id, password, user_role, profile_pic, local_area, local_area_auth_date, own_badge, status)
+VALUES 
+('여행가123', 'user001', 'password123!', 'USER', 'profile1.jpg', '서울', NOW(), 1, 1),
+('관리자001', 'admin001', 'adminPass@!', 'ADMIN', 'profile_admin.jpg', '부산', NOW(), 0, 0);
+
+-- 채팅방
+CREATE TABLE IF NOT EXISTS chat_room(
+   id INT AUTO_INCREMENT PRIMARY KEY,
+   chatroom_name VARCHAR(255) NOT NULL,
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+   alarm TINYINT # 0 알림끔 1 킴
+) ENGINE=INNODB COMMENT '채팅방'; 
+
+INSERT INTO chat_room (chatroom_name, created_at, alarm)
+VALUES 
+('제주도 여행 그룹 채팅방', NOW(), 1),
+('부산 맛집 탐방 채팅방', NOW(), 0);
+
+    
+
+CREATE TABLE IF NOT EXISTS messages(
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      chatroom_id INT,
+      user_id INT,
+      message_contents VARCHAR(4000) NOT NULL,
+      send_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      is_read BOOLEAN DEFAULT FALSE,
+      read_count INT NOT NULL,
+      FOREIGN KEY(chatroom_id) REFERENCES chat_room(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+) ENGINE=INNODB COMMENT '채팅 메시지';     
+
+-- 링크테이블
+CREATE TABLE IF NOT EXISTS participate_members(
+   user_id INT,
+   chatroom_id INT,
+         
+   FOREIGN KEY(chatroom_id) REFERENCES chat_room(id),
+   FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+
+# 여행일정
+CREATE TABLE IF NOT EXISTS trip (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '일정 ID', 
+    user_id INT NOT NULL COMMENT '일정만든 유저ID',
+    title VARCHAR(255) NOT NULL COMMENT '여헹 제목',
+    region VARCHAR(255) NOT NULL COMMENT '여행 지역',
+    start_date DATE COMMENT '여행 시작 날짜',
+    end_date DATE COMMENT '여행 종료 날짜',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '일정 만든 날짜',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '일정 수정 날짜',
+    chatting_id INT COMMENT '채팅방 아이디',
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (chatting_id) REFERENCES chat_room(id)  
+) ENGINE=INNODB COMMENT '여행일정';
+
+INSERT INTO trip (user_id, title, region, start_date, end_date, chatting_id)
+VALUES 
+(1, '제주도 힐링 여행', '제주도', '2024-12-26', '2025-01-20', 1),
+(2, '부산 맛집 탐방', '부산', '2024-12-26', '2024-01-21', 2);
+
+select * from trip;
+
+ALTER TABLE trip AUTO_INCREMENT = 1;
+
+# 장소
+CREATE TABLE IF NOT EXISTS location (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '장소 ID',
+    name VARCHAR(255) NOT NULL COMMENT '장소 이름',
+    address VARCHAR(255) NOT NULL COMMENT '주소',
+    latitude DECIMAL(9, 6) COMMENT '위도',
+    longitude DECIMAL(9, 6) COMMENT '경도',
+    category VARCHAR(255) NOT NULL COMMENT '카테고리'
+    
+    -- contact VARCHAR(50) COMMENT '전화번호',
+    # 영업 시간 확인... 배열..
+    # 장소 카테고리 확인... (여러 개일 경우)
+    -- photo_id INT COMMENT '장소사진 ID',
+    -- average_rating DECIMAL(2,1) COMMENT '평균 별점',
+    -- review_id INT COMMENT '장소리뷰 ID',
+    
+    -- FOREIGN KEY (photo_id) REFERENCES location_photo(id)
+)ENGINE=INNODB COMMENT '장소';
+
+
+
+# 비용
+CREATE TABLE expense (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '비용 id',
+    trip_id INT NOT NULL,      		-- 여행 ID
+    date DATE NOT NULL,            -- 지출 날짜
+    category VARCHAR(50) NOT NULL, -- 지출 카테고리 (예: 쇼핑, 교통)
+    description VARCHAR(255),      -- 지출 상세 설명
+    amount DECIMAL(10, 2) NOT NULL,-- 지출 금액
+    location_id INT COMMENT '장소 ID',
+    FOREIGN KEY (trip_id) REFERENCES trip(id),
+    FOREIGN KEY (location_id) REFERENCES location(id)
+    ) ENGINE=INNODB COMMENT '비용 - 가계부';
+
+-- 받을 사람 to user
+CREATE TABLE to_payment( 
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    trip_id INT NOT NULL,          -- 여행 ID
+    expense_id INT NOT NULL,       -- 비용 ID
+    to_user INT NOT NULL, 		   -- 받을 사람
+    amount DECIMAL(10, 2) NOT NULL, -- 지출 금액
+    FOREIGN KEY (trip_id) REFERENCES trip(id),
+    FOREIGN KEY (expense_id) REFERENCES expense(id),
+    FOREIGN KEY (to_user) REFERENCES users(id)
+) ENGINE=INNODB COMMENT '비용 - 돈 받아야하는 사람';
+
+-- 보낼 사람 from user
+CREATE TABLE from_payment( 
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    trip_id INT NOT NULL,          -- 여행 ID
+    expense_id INT NOT NULL,       -- 비용 ID
+    from_user INT NOT NULL, 	   -- 보낼 사람
+    FOREIGN KEY (trip_id) REFERENCES trip(id),
+    FOREIGN KEY (expense_id) REFERENCES expense(id),
+    FOREIGN KEY (from_user) REFERENCES users(id)
+) ENGINE=INNODB COMMENT '비용 - 돈 내야하는 사람';
+
+
+
+# 날짜별 장소 추가 및 관리
+CREATE TABLE IF NOT EXISTS trip_day_location (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID', 
+    trip_id INT NOT NULL COMMENT '일정 ID',
+    location_id INT NOT NULL COMMENT '장소 ID',
+    date DATE NOT NULL COMMENT '날짜',
+    visit_time TIME COMMENT '방문시간',
+    order_index INT COMMENT '장소 순서', # 쿼리하나로 할 수 있는 방법을 찾아보기 ! 
+    memo VARCHAR(255) COMMENT '장소 귀속 메모',
+    expense_id INT COMMENT '장소 귀속 비용id', 
+    
+    FOREIGN KEY (trip_id) REFERENCES trip(id),
+    FOREIGN KEY (location_id) REFERENCES location(id),
+    FOREIGN KEY (expense_id) REFERENCES expense(id)
+) ENGINE=INNODB COMMENT '여행일정별 날짜';
+
+
+# 메모 관리
+CREATE TABLE IF NOT EXISTS trip_note (
+	id INT AUTO_INCREMENT PRIMARY KEY COMMENT '메모 ID', 
+    trip_id INT NOT NULL COMMENT '일정 ID',
+    content VARCHAR(255) NOT NULL COMMENT '메모 내용',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '메모 작성 날짜',
+    FOREIGN KEY (trip_id) REFERENCES trip(id)
+) ENGINE=INNODB COMMENT '메모 관리';
+
+# 장소 저장
+CREATE TABLE IF NOT EXISTS location_favorite (
+	location_id INT NOT NULL COMMENT '장소 ID',
+    user_id INT NOT NULL COMMENT '유저 ID',
+    
+    FOREIGN KEY (location_id) REFERENCES location(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    PRIMARY KEY (location_id, user_id) # 중복 저장방지
+) ENGINE=INNODB COMMENT '장소 저장 - 링크';
+
+
+-- 체크리스트
+CREATE TABLE IF NOT EXISTS checklist_category ( 
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    trip_id INT NOT NULL,
+    user_id INT NOT NULL,    
+    name VARCHAR(100) NOT NULL, 
+    FOREIGN KEY (trip_id) REFERENCES trip(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)   
+) ENGINE=INNODB COMMENT '체크리스트 카테고리';
+
+INSERT INTO checklist_category (trip_id, user_id, name)
+VALUES 
+(1, 1, '여행 필수 준비물'),
+(1, 1, '기본 짐싸기');
+
+select * from checklist_category;
+
+-- 체크 리스트 아이템
+CREATE TABLE IF NOT EXISTS checklist_item ( 
+	id INT AUTO_INCREMENT PRIMARY KEY,
+	category_id INT NOT NULL,    
+	name VARCHAR(100) NOT NULL,     
+	description VARCHAR(255),     
+	is_checked BOOLEAN DEFAULT FALSE,     
+	FOREIGN KEY (category_id) REFERENCES checklist_category(id)
+) ENGINE=INNODB COMMENT '체크리스트 아이템';     
+     
+INSERT INTO checklist_item (category_id, name, description)
+VALUES 
+(1, '숙소', ''),
+(1, '교통', '버스/지하철');
+
+select * from checklist_item;
+
+-- 유저 알림 테이블
+CREATE TABLE IF NOT EXISTS user_alarm(
+	id INT, #1 첨삭받았을 때 #2 채택되었을 때 #3뱃지달았을때
+    is_read TINYINT, #0 안읽음 1 읽음
+    user_id INT, 
+    FOREIGN KEY(user_id) REFERENCES users(id)
+) ENGINE=INNODB COMMENT '유저 알림 테이블';
+
+
+-- 첨삭받을 포스트들
+CREATE TABLE IF NOT EXISTS posts (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    contents VARCHAR(255),
+    trip_day_location_id INT NOT NULL,
+    user_id INT NOT NULL, 
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    FOREIGN KEY (trip_day_location_id) REFERENCES trip_day_location(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+# 포스트 저장
+CREATE TABLE IF NOT EXISTS post_favorite (
+	post_id INT NOT NULL COMMENT '포스트 ID',
+    user_id INT NOT NULL COMMENT '유저 ID',
+    
+    FOREIGN KEY (post_id) REFERENCES posts(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    PRIMARY KEY (post_id, user_id) # 중복 저장방지
+) ENGINE=INNODB COMMENT '포스트 저장 - 링크';
+
+-- 장소에 대한 첨삭
+CREATE TABLE IF NOT EXISTS advice_place (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    contents VARCHAR(255) NOT NULL,
+    location_id INT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (location_id) REFERENCES location(id)
+);
+
+-- 전체적인 첨삭
+CREATE TABLE IF NOT EXISTS advice_entire (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    contents VARCHAR(255) NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- 첨삭한 컨텍츠 (전체)
+CREATE TABLE IF NOT EXISTS local_advice (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    advice_place_id INT, # 장소에 대한 코멘트
+    advice_entire_id INT, # 전체적인 코멘트
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '첨삭 작성 날짜',
+    is_selected TINYINT, # 채택여부
+    FOREIGN KEY (post_id) REFERENCES posts(id),
+    FOREIGN KEY (advice_place_id) REFERENCES advice_place(id),
+    FOREIGN KEY (advice_entire_id) REFERENCES advice_entire(id)
+);
