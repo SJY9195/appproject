@@ -108,4 +108,22 @@ public class ChecklistController {
         return ResponseEntity.noContent().build();
     }
 
+
+    @DeleteMapping("/items/delete")
+    public ResponseEntity<String> deleteItems(
+            @RequestBody Map<String, List<Integer>> requestBody
+    ) {
+        List<Integer> itemIds = requestBody.get("itemIds");
+
+        if (itemIds == null || itemIds.isEmpty()) {
+            return ResponseEntity.badRequest().body("삭제할 아이템 ID 목록을 입력해주세요.");
+        }
+
+        try {
+            checklistService.deleteItems(itemIds);
+            return ResponseEntity.ok("선택한 항목이 삭제되었습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("항목 삭제 실패: " + e.getMessage());
+        }
+    }
 }

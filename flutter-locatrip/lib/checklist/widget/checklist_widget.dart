@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_locatrip/checklist/screen/add_item_screen.dart';
 
+const grayColor = Color(0xffaaaaaa);
+const pointBlueColor = Color(0xff2BC0E4);
+
 class ChecklistWidget extends StatelessWidget {
   final Map<String, dynamic> category;
   final Function(int, bool) onItemChecked;
   final VoidCallback onItemAdd;
   final bool isEditing;  // 편집 모드 여부
   final VoidCallback onDelete;  // 삭제 버튼 클릭 시 호출되는 콜백
+  final VoidCallback onDeleteItems;
+  final Function(int) onItemDelete;
 
   ChecklistWidget({
     required this.category,
@@ -14,6 +19,8 @@ class ChecklistWidget extends StatelessWidget {
     required this.onItemAdd,
     required this.isEditing,
     required this.onDelete,
+    required this.onDeleteItems,
+    required this.onItemDelete,
   });
 
   @override
@@ -29,7 +36,7 @@ class ChecklistWidget extends StatelessWidget {
       ),
       trailing: isEditing
       ? IconButton(
-        icon: Icon(Icons.delete),
+        icon: Icon(Icons.more_horiz, color: grayColor),
         onPressed: onDelete,
       )
       : Icon(Icons.expand_more),
@@ -39,22 +46,43 @@ class ChecklistWidget extends StatelessWidget {
           category['items'].length,
               (index) {
             var item = category['items'][index];
-            return CheckboxListTile(
-              title: Text(item['name']),
-              value: item['isChecked'] ?? false,
-              onChanged: (bool? value) {
-                onItemChecked(index, value ?? false);
-              },
-            );
+            return ListTile(
+              leading:  Checkbox(
+                value: item['isChecked'] ?? false,
+                shape: CircleBorder(),
+                onChanged: isEditing
+                  ? null
+                  : (bool? value) {
+                  onItemChecked(index, value ?? false);
+                },
+              ),
+              title: Text(
+                  item['name'],
+                  style: TextStyle(
+                    color: isEditing ? grayColor : Colors.black,
+                  ),
+              ),
+              trailing: isEditing
+              ? IconButton(
+                icon: Icon(Icons.more_horiz, color: grayColor),
+                onPressed: () {
+                  onItemDelete(item['id']);
+                },
+              )
+                  : null,
+              );
           },
         ).toList(),
         // 아이템 추가 버튼
-        CheckboxListTile(
-          title: Text('아이템 추가'),
-          value: false,  // 기본적으로 체크되지 않음
-          onChanged: (bool? value) {
-            onItemAdd();  // 아이템 추가 콜백 호출
-          },
+        ListTile(
+          leading: Icon(Icons.radio_button_unchecked, color: isEditing ? grayColor : pointBlueColor),
+          title: Text(
+            '아이템 추가',
+            style: TextStyle(
+              color: isEditing ? grayColor : Colors.black,
+            ),
+          ),
+          onTap: isEditing ? null : onItemAdd,
         ),
       ],
     );

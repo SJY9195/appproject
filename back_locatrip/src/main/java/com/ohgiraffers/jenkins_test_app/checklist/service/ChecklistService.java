@@ -114,4 +114,15 @@ public class ChecklistService {
         return true;
    }
 
+   @Transactional
+    public void deleteItems(List<Integer> itemIds) {
+        List<ChecklistItem> itemsToDelete = itemRepository.findAllById(itemIds);
+
+        if (itemsToDelete.isEmpty()) {
+            throw new IllegalArgumentException("삭제할 항목을 찾을 수 없습니다.");
+        }
+
+        itemRepository.deleteAll(itemsToDelete);
+   }
+
 }

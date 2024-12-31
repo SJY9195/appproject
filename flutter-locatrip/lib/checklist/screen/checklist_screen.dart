@@ -14,6 +14,7 @@ class ChecklistScreen extends StatefulWidget {
 class _ChecklistScreenState extends State<ChecklistScreen> {
   final ChecklistModel _checklistModel = ChecklistModel();
   List<dynamic> _categories = [];
+  List<int> _selectedItemIds = [];
   int _selectedIndex = 0;
   bool _isEditing = false;
 
@@ -48,7 +49,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('삭제', style: TextStyle(fontSize: 18)),
+              Text('카테고리 삭제하기', style: TextStyle(fontSize: 18)),
               SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -78,6 +79,77 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         );
       },
     );
+  }
+
+  void _showItemDeleteConfirmation(int itemId) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('아이템 삭제하기', style: TextStyle(fontSize: 18)),
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: (){
+                      Navigator.pop(context);
+                    },
+                    child: Text('취소'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      try {
+                        await _checklistModel.deleteItems([itemId]);
+                        Navigator.pop(context);
+                        _loadCategories();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('아이템이 삭제되었습니다.')),
+                        );
+                      } catch (e) {
+                        print("아이템 삭제 실패: $e");
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('아이템 삭제 실패: $e')),
+                        );
+                      }
+                    },
+                    child: Text('삭제'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      }
+    );
+  }
+
+  void _deleteSelectedItems() async {
+    if (_selectedItemIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('삭제할 항목을 선택해주세요.')),
+      );
+      return;
+    }
+
+    try {
+      await _checklistModel.deleteItems(_selectedItemIds);
+      _selectedItemIds.clear();
+      _loadCategories();
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('선택된 항목이 삭제되었습니다.')),
+      );
+    } catch(e) {
+     print("삭제 실패: $e");
+     ScaffoldMessenger.of(context).showSnackBar(
+       SnackBar(content: Text('항목 삭제 실패: $e')),
+     );
+    }
   }
 
   void _addCategory(BuildContext context) async {
@@ -148,14 +220,16 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 ChecklistWidget(
                   category: _categories[index],
                   onItemChecked: (itemIndex, isChecked) {
-                    _updateItemCheckedStatus(
-                      _categories[index]['items'][itemIndex]['id'],
-                      isChecked,
-                    );
-                    setState(() {
-                      _categories[index]['items'][itemIndex]
-                      ['isChecked'] = isChecked;
-                    });
+                   int itemId = _categories[index]['items'][itemIndex]['id'];
+                   if (isChecked) {
+                     _selectedItemIds.add(itemId);
+                   } else {
+                     _selectedItemIds.remove(itemId);
+                   }
+                   _updateItemCheckedStatus(itemId, isChecked);
+                   setState(() {
+                     _categories[index]['items'][itemIndex]['isChecked'] = isChecked;
+                   });
                   },
                   onItemAdd: () {
                     _navigateToAddItemScreen(
@@ -164,6 +238,10 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   isEditing: _isEditing,
                   onDelete: () {
                     _showDeleteConfirmation(_categories[index]['id']);
+                  },
+                  onDeleteItems: _deleteSelectedItems,
+                  onItemDelete: (itemId) {
+                    _showItemDeleteConfirmation(itemId);
                   },
                 ),
               ],
@@ -193,6 +271,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           }
         },
       ),
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onTapped,

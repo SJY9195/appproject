@@ -54,6 +54,24 @@ class ChecklistModel {
     }
   }
 
+  Future<void> deleteItems(List<int> itemIds) async {
+    try{
+      final response = await dio.delete(
+        "$baseUrl/items/delete",
+        data: {'itemIds': itemIds},
+      );
+
+      if (response.statusCode == 200) {
+        print ("선택한 항목이 삭제되었습니다.");
+      } else {
+        throw Exception("항목 삭제 실패");
+      }
+    } catch (e) {
+      print("Error: $e");
+      throw Exception("삭제 실패: $e");
+    }
+  }
+
   Future<List<dynamic>> getItemsByCategory(int categoryId) async {
     try {
       final response = await dio.get("$baseUrl/categories/$categoryId/items");
