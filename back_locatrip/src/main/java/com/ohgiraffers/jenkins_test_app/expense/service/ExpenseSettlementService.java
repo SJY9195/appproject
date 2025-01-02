@@ -1,8 +1,6 @@
 package com.ohgiraffers.jenkins_test_app.expense.service;
 
-import com.ohgiraffers.jenkins_test_app.expense.entity.Expense;
-import com.ohgiraffers.jenkins_test_app.expense.entity.ExpensePaidBy;
-import com.ohgiraffers.jenkins_test_app.expense.entity.ExpenseParticipants;
+import com.ohgiraffers.jenkins_test_app.expense.entity.*;
 import com.ohgiraffers.jenkins_test_app.expense.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,6 +29,16 @@ public class ExpenseSettlementService {
 
         for (ExpenseParticipants participants : participantsList) {
             BigDecimal participantAmount = participants.getAmount();
+
+            ToPayment toPayment = new ToPayment();
+            toPayment.setExpense(expense);
+            toPayment.setToUserId(participants.getUserId());
+            toPaymentRepository.save(toPayment);
+
+            FromPayment fromPayment = new FromPayment();
+            fromPayment.setExpense(expense);
+            fromPayment.setFromUserId(paidByList.get(0).getUserId());
+            fromPaymentRepository.save(fromPayment);
 
         }
     }
