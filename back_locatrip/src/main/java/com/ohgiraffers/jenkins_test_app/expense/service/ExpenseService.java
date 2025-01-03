@@ -35,14 +35,31 @@ public class ExpenseService {
 
     public Map<String, Map<String, Object>> getExpensesGroupedByTripDays(int tripId) {
         List<Object[]> results = expenseRepository.findExpensesGroupedByTripDays(tripId);
+        List<Object[]> preparationResults = expenseRepository.findPreparationExpenses(tripId);
 
         Map<String, Map<String, Object>> groupedExpenses = new LinkedHashMap<>();
 
-        // 여행 준비 기본 섹션
+        // 여행 준비 섹션
         Map<String, Object> preparationExpenses = new HashMap<>();
         preparationExpenses.put("date", "여행 준비");
         preparationExpenses.put("expenses", new ArrayList<Map<String, Object>>());
         groupedExpenses.put("preparation", preparationExpenses);
+
+        // 여행 준비 항목
+        List<Map<String, Object>> preparationList = (List<Map<String, Object>>) preparationExpenses.get("expenses");
+        for (Object[] row : preparationResults) {
+            String category = (String) row[0];
+            double amount = ((Number) row[1]).doubleValue();
+            String description = (String) row[2];
+
+            Map<String, Object> expense = new LinkedHashMap<>();
+            expense.put("category", category);
+            expense.put("amount", amount);
+            expense.put("description", description);
+
+            preparationList.add(expense);
+        }
+
 
         for (Object[] row : results) {
             int dayNumber = ((Number) row[0]).intValue();
@@ -72,23 +89,32 @@ public class ExpenseService {
         return groupedExpenses;
     }
 
-    public Expense saveExpense(Expense expense) {
-        return expenseRepository.save(expense);
-    }
+    public Expense saveExpenseWithDetails(
+            Expense expense,
+            List<Map<String, Object>> paidByDetails,
+            List<Map<String, Object>> participantDetails){
 
-    public void savePaidBy(int expenseId, int userId, BigDecimal amount) {
-        ExpensePaidBy paidBy = new ExpensePaidBy();
-        paidBy.setExpense(expenseRepository.findById(expenseId).orElseThrow());
-        paidBy.setUserId(userId);
-        paidBy.setAmount(amount);
-        paidByRepository.save(paidBy);
-    }
+        Expense savedExpense = expenseRepository.save(expense);
 
-    public void saveParticipant(int expenseId, int userId, BigDecimal amount) {
-        ExpenseParticipants participant = new ExpenseParticipants();
-        participant.setExpense(expenseRepository.findById(expenseId).orElseThrow());
-        participant.setUserId(userId);
-        participant.setAmount(amount);
-        participantsRepository.save(participant);
+        if (paidByDetails != null) {
+            for (Map<String, Object> detail : paidByDetails) {
+                ExpensePaidBy paidBy = new ExpensePaidBy();
+                paidBy.setExpense(savedExpense);
+                paidBy.setUserId((Integer) detail.get("userId"));
+                paidBy.setAmount(new BigDecimal(detail.get("amount").toString()));
+                paidByRepository.save(paidBy);
+            }
+        }
+
+        if (participantDetails != null) {
+            for (Map<String, Object> detail : participantDetails) {
+                ExpenseParticipants participant = new ExpenseParticipants();
+                participant.setExpense(savedExpense);
+                participant.setUserId((Integer) detail.get("userId"));
+                participant.setAmount(new BigDecimal(detail.get("amount").toString()));
+                participantsRepository.save(participant);
+            }
+        }
+        return savedExpense;
     }
 }

@@ -1,7 +1,11 @@
 package com.ohgiraffers.jenkins_test_app.expense.dto;
 
+import com.ohgiraffers.jenkins_test_app.expense.entity.ExpensePaidBy;
+import com.ohgiraffers.jenkins_test_app.expense.entity.ExpenseParticipants;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class ExpenseDTO {
     private int tripId;
@@ -9,18 +13,23 @@ public class ExpenseDTO {
     private String category;
     private String description;
     private BigDecimal amount;
-    private Long userId;
+    private String paymentMethod;
+
+    private List<ExpensePaidByDTO> paidByUsers;
+    private List<ExpenseParticipantsDTO> participants;
 
     public ExpenseDTO() {
     }
 
-    public ExpenseDTO(int tripId, LocalDateTime date, String category, String description, BigDecimal amount, Long userId) {
+    public ExpenseDTO(int tripId, LocalDateTime date, String category, String description, BigDecimal amount, String paymentMethod, List<ExpensePaidByDTO> paidByUsers, List<ExpenseParticipantsDTO> participants) {
         this.tripId = tripId;
         this.date = date;
         this.category = category;
         this.description = description;
         this.amount = amount;
-        this.userId = userId;
+        this.paymentMethod = paymentMethod;
+        this.paidByUsers = paidByUsers;
+        this.participants = participants;
     }
 
     public int getTripId() {
@@ -63,12 +72,28 @@ public class ExpenseDTO {
         this.amount = amount;
     }
 
-    public Long getUserId() {
-        return userId;
+    public String getPaymentMethod() {
+        return paymentMethod;
     }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public List<ExpensePaidByDTO> getPaidByUsers() {
+        return paidByUsers;
+    }
+
+    public void setPaidByUsers(List<ExpensePaidByDTO> paidByUsers) {
+        this.paidByUsers = paidByUsers;
+    }
+
+    public List<ExpenseParticipantsDTO> getParticipants() {
+        return participants;
+    }
+
+    public void setParticipants(List<ExpenseParticipantsDTO> participants) {
+        this.participants = participants;
     }
 
     @Override
@@ -79,7 +104,9 @@ public class ExpenseDTO {
                 ", category='" + category + '\'' +
                 ", description='" + description + '\'' +
                 ", amount=" + amount +
-                ", userId=" + userId +
+                ", paymentMethod='" + paymentMethod + '\'' +
+                ", paidByUsers=" + paidByUsers +
+                ", participants=" + participants +
                 '}';
     }
 

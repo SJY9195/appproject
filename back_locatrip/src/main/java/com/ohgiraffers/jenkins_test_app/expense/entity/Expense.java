@@ -3,10 +3,8 @@ package com.ohgiraffers.jenkins_test_app.expense.entity;
 import com.ohgiraffers.jenkins_test_app.trip.entity.Trip;
 
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
 
 @Entity
 @Table(name = "expense")
@@ -27,22 +25,25 @@ public class Expense {
 
     private BigDecimal amount;
 
-/*
+    private String paymentMethod;
+
+    /*
     @ManyToOne
     @JoinColumn(name = "location_id")
     private Location location;
-*/
+    */
 
     public Expense() {
     }
 
-    public Expense(int id, Trip trip, LocalDateTime date, String category, String description, BigDecimal amount) {
+    public Expense(int id, Trip trip, LocalDateTime date, String category, String description, BigDecimal amount, String paymentMethod) {
         this.id = id;
         this.trip = trip;
         this.date = date;
         this.category = category;
         this.description = description;
         this.amount = amount;
+        this.paymentMethod = paymentMethod;
     }
 
     public int getId() {
@@ -93,5 +94,24 @@ public class Expense {
         this.amount = amount;
     }
 
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
 
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    @Override
+    public String toString() {
+        return "Expense{" +
+                "id=" + id +
+                ", trip=" + trip +
+                ", date=" + date +
+                ", category='" + category + '\'' +
+                ", description='" + description + '\'' +
+                ", amount=" + amount +
+                ", paymentMethod='" + paymentMethod + '\'' +
+                '}';
+    }
 }

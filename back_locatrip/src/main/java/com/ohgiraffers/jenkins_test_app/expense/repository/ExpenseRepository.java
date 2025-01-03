@@ -19,4 +19,9 @@ public interface ExpenseRepository extends JpaRepository<Expense, Integer> {
                    "AND e.trip_id = :tripId " +
                    "ORDER BY e.date", nativeQuery = true)
     List<Object[]> findExpensesGroupedByTripDays(@Param("tripId") int tripId);
+
+    @Query(value = "SELECT e.category, e.amount, e.description " +
+                    "FROM expense e " +
+                    "WHERE e.trip_id = :tripId AND e.date IS NULL", nativeQuery = true)
+    List<Object[]> findPreparationExpenses(@Param("tripId") int tripId);
 }
