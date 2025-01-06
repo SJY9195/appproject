@@ -4,7 +4,7 @@ import com.ohgiraffers.jenkins_test_app.trip.entity.Trip;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "expense")
@@ -13,11 +13,10 @@ public class Expense {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @ManyToOne
-    @JoinColumn(name = "trip_id", nullable = false)
-    private Trip trip;
+    @Column(name = "trip_id", nullable = false)
+    private Integer tripId;
 
-    private LocalDateTime date;
+    private LocalDate date;
 
     private String category;
 
@@ -27,7 +26,17 @@ public class Expense {
 
     private String paymentMethod;
 
-    /*
+
+    public Expense(int id, Integer tripId, LocalDate date, String category, String description, BigDecimal amount, String paymentMethod) {
+        this.id = id;
+        this.tripId = tripId;
+        this.date = date;
+        this.category = category;
+        this.description = description;
+        this.amount = amount;
+        this.paymentMethod = paymentMethod;
+    }
+/*
     @ManyToOne
     @JoinColumn(name = "location_id")
     private Location location;
@@ -36,14 +45,13 @@ public class Expense {
     public Expense() {
     }
 
-    public Expense(int id, Trip trip, LocalDateTime date, String category, String description, BigDecimal amount, String paymentMethod) {
-        this.id = id;
-        this.trip = trip;
-        this.date = date;
-        this.category = category;
-        this.description = description;
-        this.amount = amount;
-        this.paymentMethod = paymentMethod;
+
+    public Integer getTripId() {
+        return tripId;
+    }
+
+    public void setTripId(Integer tripId) {
+        this.tripId = tripId;
     }
 
     public int getId() {
@@ -54,19 +62,13 @@ public class Expense {
         this.id = id;
     }
 
-    public Trip getTrip() {
-        return trip;
-    }
 
-    public void setTrip(Trip trip) {
-        this.trip = trip;
-    }
 
-    public LocalDateTime getDate() {
+    public LocalDate getDate() {
         return date;
     }
 
-    public void setDate(LocalDateTime date) {
+    public void setDate(LocalDate date) {
         this.date = date;
     }
 
@@ -102,16 +104,5 @@ public class Expense {
         this.paymentMethod = paymentMethod;
     }
 
-    @Override
-    public String toString() {
-        return "Expense{" +
-                "id=" + id +
-                ", trip=" + trip +
-                ", date=" + date +
-                ", category='" + category + '\'' +
-                ", description='" + description + '\'' +
-                ", amount=" + amount +
-                ", paymentMethod='" + paymentMethod + '\'' +
-                '}';
-    }
+
 }

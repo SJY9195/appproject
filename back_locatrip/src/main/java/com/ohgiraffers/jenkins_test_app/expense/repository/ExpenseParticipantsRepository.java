@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ExpenseParticipantsRepository extends JpaRepository<ExpenseParticipants, Integer> {
     List<ExpenseParticipants> findByExpenseId(Integer expenseId);
+    void deleteByExpenseId(int expenseId);
 }

@@ -9,31 +9,32 @@ import java.math.BigDecimal;
 public class ExpensePaidBy {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private int id;
 
     @ManyToOne
     @JoinColumn(name = "expense_id", nullable = false)
     private Expense expense;
 
-    private int userId;
+    @Column(name = "user_id", nullable = false)
+    private Integer userId;
 
     private BigDecimal amount;
 
     public ExpensePaidBy() {
     }
 
-    public ExpensePaidBy(Long id, Expense expense, int userId, BigDecimal amount) {
+    public ExpensePaidBy(int id, Expense expense, Integer userId, BigDecimal amount) {
         this.id = id;
         this.expense = expense;
         this.userId = userId;
         this.amount = amount;
     }
 
-    public Long getId() {
+    public int getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(int id) {
         this.id = id;
     }
 
@@ -45,11 +46,11 @@ public class ExpensePaidBy {
         this.expense = expense;
     }
 
-    public int getUserId() {
+    public Integer getUserId() {
         return userId;
     }
 
-    public void setUserId(int userId) {
+    public void setUserId(Integer userId) {
         this.userId = userId;
     }
 
@@ -60,5 +61,5 @@ public class ExpensePaidBy {
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
-
 }
+

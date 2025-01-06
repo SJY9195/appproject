@@ -4,22 +4,22 @@ import java.math.BigDecimal;
 
 public class ExpenseParticipantsDTO {
 
-    private int userId;
+    private Integer userId;
     private BigDecimal amount;
 
     public ExpenseParticipantsDTO() {
     }
 
-    public ExpenseParticipantsDTO(int userId, BigDecimal amount) {
+    public ExpenseParticipantsDTO(Integer userId, BigDecimal amount) {
         this.userId = userId;
         this.amount = amount;
     }
 
-    public int getUserId() {
+    public Integer getUserId() {
         return userId;
     }
 
-    public void setUserId(int userId) {
+    public void setUserId(Integer userId) {
         this.userId = userId;
     }
 

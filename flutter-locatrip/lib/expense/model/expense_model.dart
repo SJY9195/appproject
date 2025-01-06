@@ -6,17 +6,46 @@ class ExpenseModel {
 
   Future<void> createExpense(Map<String, dynamic> expenseData) async {
     try {
-      final response = await dio.post('$baseUrl/insert', data: expenseData);
-          if (response.statusCode == 200) {
-            print('비용이 성공적으로 추가되었습니다.');
-          } else {
-            throw Exception('비용 추가 실패');
-          }
-        } catch (e) {
-          print('Error: $e');
-          throw Exception('Error: $e');
-        }
+      print('Sending expense data: $expenseData');
+      final response = await dio.post(
+        '$baseUrl/insert',
+        data: {
+          "date": expenseData['date'],
+          "category": expenseData['category'],
+          "description": expenseData['description'],
+          "amount": expenseData['amount'],
+          "paymentMethod": expenseData['paymentMethod'],
+          "paidByUsers": expenseData['paidByUsers'].map((user) {
+            return {
+              "userId": user['userId'],
+              "amount": user['amount'],
+            };
+          }).toList(),
+          "participants": expenseData['participants'].map((user) {
+            return {
+              "userId": user['userId'],
+              "amount": user['amount'],
+            };
+          }).toList(),
+        },
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      print('Response: ${response.data}');
+      if (response.statusCode == 200) {
+        print('Expense successfully added.');
+      } else {
+        throw Exception('Failed to add expense. Status Code: ${response.statusCode}');
       }
+    } catch (e) {
+      print('Error in createExpense: $e');
+      throw Exception('Error: $e');
+    }
+  }
 
   Future<List<dynamic>> getExpenses() async {
     try {
@@ -45,4 +74,76 @@ class ExpenseModel {
       throw Exception('Error: $e');
     }
   }
+
+  Future<Map<String, dynamic>> getExpenseById(int expenseId) async {
+    try {
+      final response = await dio.get('$baseUrl/$expenseId');
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      } else {
+        throw Exception('Failed to fetch expense details. Status Code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching expense details: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
+  Future<void> updateExpense(int expenseId, Map<String, dynamic> expenseData) async {
+    try {
+      print('Updating expense data: $expenseData');
+      final response = await dio.put(
+        '$baseUrl/$expenseId',
+        data: {
+          "date": expenseData['date'],
+          "category": expenseData['category'],
+          "description": expenseData['description'],
+          "amount": expenseData['amount'],
+          "paymentMethod": expenseData['paymentMethod'],
+          "paidByUsers": expenseData['paidByUsers'].map((user) {
+            return {
+              "userId": user['userId'],
+              "amount": user['amount'],
+            };
+          }).toList(),
+          "participants": expenseData['participants'].map((user) {
+            return {
+              "userId": user['userId'],
+              "amount": user['amount'],
+            };
+          }).toList(),
+        },
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        print('Expense successfully updated.');
+      } else {
+        throw Exception('Failed to update expense. Status Code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error updating expense: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
+
+  Future<Map<String, dynamic>> getTotalSettlement() async {
+    try {
+      final response = await dio.get('$baseUrl/settlement/total');
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      } else {
+        throw Exception('정산 내역 불러오기 실패');
+      }
+    } catch (e) {
+      print('Error: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
 }

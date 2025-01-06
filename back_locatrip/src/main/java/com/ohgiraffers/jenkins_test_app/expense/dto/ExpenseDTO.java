@@ -1,15 +1,17 @@
 package com.ohgiraffers.jenkins_test_app.expense.dto;
 
+import com.ohgiraffers.jenkins_test_app.expense.entity.Expense;
 import com.ohgiraffers.jenkins_test_app.expense.entity.ExpensePaidBy;
 import com.ohgiraffers.jenkins_test_app.expense.entity.ExpenseParticipants;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 public class ExpenseDTO {
-    private int tripId;
-    private LocalDateTime date;
+    private Integer id;
+    private Integer tripId;
+    private LocalDate date;
     private String category;
     private String description;
     private BigDecimal amount;
@@ -21,30 +23,39 @@ public class ExpenseDTO {
     public ExpenseDTO() {
     }
 
-    public ExpenseDTO(int tripId, LocalDateTime date, String category, String description, BigDecimal amount, String paymentMethod, List<ExpensePaidByDTO> paidByUsers, List<ExpenseParticipantsDTO> participants) {
-        this.tripId = tripId;
-        this.date = date;
-        this.category = category;
-        this.description = description;
-        this.amount = amount;
-        this.paymentMethod = paymentMethod;
+    public ExpenseDTO(Expense expense, List<ExpensePaidByDTO> paidByUsers, List<ExpenseParticipantsDTO> participants) {
+        this.id = expense.getId();
+        this.tripId = expense.getTripId();
+        this.date = expense.getDate();
+        this.category = expense.getCategory();
+        this.description = expense.getDescription();
+        this.amount = expense.getAmount();
+        this.paymentMethod = expense.getPaymentMethod();
         this.paidByUsers = paidByUsers;
         this.participants = participants;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
     }
 
     public int getTripId() {
         return tripId;
     }
 
-    public void setTripId(int tripId) {
+    public void setTripId(Integer tripId) {
         this.tripId = tripId;
     }
 
-    public LocalDateTime getDate() {
+    public LocalDate getDate() {
         return date;
     }
 
-    public void setDate(LocalDateTime date) {
+    public void setDate(LocalDate date) {
         this.date = date;
     }
 
@@ -99,7 +110,8 @@ public class ExpenseDTO {
     @Override
     public String toString() {
         return "ExpenseDTO{" +
-                "tripId=" + tripId +
+                "id=" + id +
+                ", tripId=" + tripId +
                 ", date=" + date +
                 ", category='" + category + '\'' +
                 ", description='" + description + '\'' +

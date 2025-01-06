@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_locatrip/common/widget/color.dart';
 import 'package:flutter_locatrip/expense/model/expense_model.dart';
 import 'package:flutter_locatrip/expense/screen/expense_extracost_screen.dart';
+import 'package:flutter_locatrip/expense/screen/expense_settlement.dart';
+import 'package:flutter_locatrip/expense/screen/expense_updatecost_screen.dart';
 
 class ExpenseScreen extends StatefulWidget {
   final int tripId;
@@ -47,6 +49,15 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
         isLoading = false;
       });
     }
+  }
+
+  void _navigateToSettlementScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ExpenseSettlementScreen(),
+      ),
+    );
   }
 
   void _showPeriodPicker() {
@@ -117,18 +128,41 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     );
   }
 
+  void _navigateToUpdateExpense(int expenseId) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ExpenseUpdateCostScreen(expenseId: expenseId),
+      ),
+    );
 
-  void _navigateToAddExpense(String selectedDate) {
-    Navigator.push(
+    if (result == true) {
+      await loadExpensesGroupedByDays(); // 수정 후 목록 새로고침
+      setState(() {});
+    }
+  }
+
+  Future<void> _navigateToAddExpense(String selectedDate) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ExpenseExtracostScreen(
           tripId: widget.tripId,
           selectedDate: selectedDate,
+          availableDates: groupedExpenses.keys.toList(),
+          groupedExpenses: groupedExpenses,
         ),
       ),
-    ).then((_) => loadExpensesGroupedByDays());
+    );
+
+    if (result == true) {
+      // 비용이 추가되었으면 리스트 새로고침
+      await loadExpensesGroupedByDays();
+      setState(() {});
+    }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -143,8 +177,13 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(110),
         child: AppBar(
-          automaticallyImplyLeading: false, // 기본 여백 제거
           title: const Text('가계부'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.calculate),
+              onPressed: _navigateToSettlementScreen,
+            ),
+          ],
           flexibleSpace: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,11 +231,13 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
               ...(dayData['expenses'] as List).map((expense) {
                 final String category = expense['category'] ?? '기타';
                 final IconData icon = categoryIcons[category] ?? Icons.sms;
+                print(expense['id']);
 
                 return ListTile(
                   leading: Icon(icon, color: pointBlueColor),
                   title: Text(expense['description']),
                   trailing: Text('₩${expense['amount']}'),
+                  onTap: () => _navigateToUpdateExpense(expense['id']),
                 );
               }).toList(),
               OutlinedButton(
@@ -209,7 +250,10 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 420, vertical: 10),
                   textStyle: const TextStyle(fontSize: 16),
                 ),
-                onPressed: () => _navigateToAddExpense(date),
+                onPressed: () {
+                  final formattedDay = day == "preparation" ? '여행 준비' : '$day $date';
+              _navigateToAddExpense(formattedDay);
+          },
                 child: const Text('비용 추가'),
               ),
             ],

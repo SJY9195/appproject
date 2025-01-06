@@ -1,11 +1,15 @@
 package com.ohgiraffers.jenkins_test_app.expense.service;
 
+import com.ohgiraffers.jenkins_test_app.expense.dto.ExpenseDTO;
+import com.ohgiraffers.jenkins_test_app.expense.dto.ExpensePaidByDTO;
+import com.ohgiraffers.jenkins_test_app.expense.dto.ExpenseParticipantsDTO;
 import com.ohgiraffers.jenkins_test_app.expense.entity.Expense;
 import com.ohgiraffers.jenkins_test_app.expense.entity.ExpensePaidBy;
 import com.ohgiraffers.jenkins_test_app.expense.entity.ExpenseParticipants;
 import com.ohgiraffers.jenkins_test_app.expense.repository.ExpensePaidByRepository;
 import com.ohgiraffers.jenkins_test_app.expense.repository.ExpenseParticipantsRepository;
 import com.ohgiraffers.jenkins_test_app.expense.repository.ExpenseRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +32,10 @@ public class ExpenseService {
     private ExpenseParticipantsRepository participantsRepository;
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM.dd/E", Locale.KOREAN);
+    @Autowired
+    private ExpensePaidByRepository expensePaidByRepository;
+    @Autowired
+    private ExpenseParticipantsRepository expenseParticipantsRepository;
 
     private String formatDate (LocalDate date) {
         return date.format(formatter);
@@ -53,6 +61,7 @@ public class ExpenseService {
             String description = (String) row[2];
 
             Map<String, Object> expense = new LinkedHashMap<>();
+            expense.put("id", ((Number) row[3]).intValue());
             expense.put("category", category);
             expense.put("amount", amount);
             expense.put("description", description);
@@ -78,6 +87,7 @@ public class ExpenseService {
             List<Map<String, Object>> expenses = (List<Map<String, Object>>) dayExpenses.getOrDefault("expenses", new ArrayList<>());
 
             Map<String, Object> expense = new HashMap<>();
+            expense.put("id", ((Number) row[5]).intValue());
             expense.put("category", category);
             expense.put("amount", amount);
             expense.put("description", description);
@@ -117,4 +127,58 @@ public class ExpenseService {
         }
         return savedExpense;
     }
+
+    public ExpenseDTO getExpenseById(int expenseId) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new RuntimeException("Expense not found"));
+
+        List<ExpensePaidByDTO> paidByUsers = expensePaidByRepository.findByExpenseId(expenseId)
+                .stream()
+                .map(paidBy -> new ExpensePaidByDTO(paidBy.getUserId(), paidBy.getAmount()))
+                .collect(Collectors.toList());
+
+        List<ExpenseParticipantsDTO> participants = expenseParticipantsRepository.findByExpenseId(expenseId)
+                .stream()
+                .map(participant -> new ExpenseParticipantsDTO(participant.getUserId(), participant.getAmount()))
+                .collect(Collectors.toList());
+
+        ExpenseDTO expenseDTO = new ExpenseDTO(expense, paidByUsers, participants);
+        expenseDTO.setId(expense.getId());
+        return expenseDTO;
+    }
+
+    @Transactional
+    public void updateExpense(int expenseId, ExpenseDTO expenseDTO) {
+        // 1. Expense 수정
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new RuntimeException("Expense not found"));
+
+        expense.setDate(expenseDTO.getDate());
+        expense.setCategory(expenseDTO.getCategory());
+        expense.setDescription(expenseDTO.getDescription());
+        expense.setAmount(expenseDTO.getAmount());
+        expense.setPaymentMethod(expenseDTO.getPaymentMethod());
+        expenseRepository.save(expense);
+
+        // 2. ExpensePaidBy 수정
+        expensePaidByRepository.deleteByExpenseId(expenseId);
+        for (ExpensePaidByDTO paidByDTO : expenseDTO.getPaidByUsers()) {
+            ExpensePaidBy paidBy = new ExpensePaidBy();
+            paidBy.setExpense(expense);
+            paidBy.setUserId(paidByDTO.getUserId());
+            paidBy.setAmount(paidByDTO.getAmount());
+            expensePaidByRepository.save(paidBy);
+        }
+
+        // 3. ExpenseParticipants 수정
+        expenseParticipantsRepository.deleteByExpenseId(expenseId);
+        for (ExpenseParticipantsDTO participantDTO : expenseDTO.getParticipants()) {
+            ExpenseParticipants participant = new ExpenseParticipants();
+            participant.setExpense(expense);
+            participant.setUserId(participantDTO.getUserId());
+            participant.setAmount(participantDTO.getAmount());
+            expenseParticipantsRepository.save(participant);
+        }
+    }
+
 }

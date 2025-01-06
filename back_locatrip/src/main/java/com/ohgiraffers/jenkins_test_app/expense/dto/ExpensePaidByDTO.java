@@ -3,22 +3,22 @@ package com.ohgiraffers.jenkins_test_app.expense.dto;
 import java.math.BigDecimal;
 
 public class ExpensePaidByDTO {
-    private int userId;
+    private Integer userId;
     private BigDecimal amount;
 
     public ExpensePaidByDTO() {
     }
 
-    public ExpensePaidByDTO(int userId, BigDecimal amount) {
+    public ExpensePaidByDTO(Integer userId, BigDecimal amount) {
         this.userId = userId;
         this.amount = amount;
     }
 
-    public int getUserId() {
+    public Integer getUserId() {
         return userId;
     }
 
-    public void setUserId(int userId) {
+    public void setUserId(Integer userId) {
         this.userId = userId;
     }
 

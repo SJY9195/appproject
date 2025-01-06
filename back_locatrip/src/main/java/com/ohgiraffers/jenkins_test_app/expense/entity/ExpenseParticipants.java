@@ -15,7 +15,8 @@ public class ExpenseParticipants {
     @JoinColumn(name = "expense_id", nullable = false)
     private Expense expense;
 
-    private int userId;
+    @Column(name = "user_id", nullable = false)
+    private Integer userId;
 
     private BigDecimal amount;
 
@@ -60,4 +61,5 @@ public class ExpenseParticipants {
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
+
 }
