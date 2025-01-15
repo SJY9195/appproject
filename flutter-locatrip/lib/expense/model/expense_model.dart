@@ -1,15 +1,19 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_locatrip/common/Auth/auth_dio_interceptor.dart';
+import 'package:flutter_locatrip/common/widget/url.dart';
 
 class ExpenseModel {
   final dio = Dio();
-  final String baseUrl = 'http://localhost:8082/expenses';
+  final String baseUrl = '$backUrl/expenses';
 
-  Future<void> createExpense(Map<String, dynamic> expenseData) async {
+  Future<void> createExpense(Map<String, dynamic> expenseData, BuildContext context) async {
+    dio.interceptors.add(AuthInterceptor(dio, context));
     try {
-      print('Sending expense data: $expenseData');
       final response = await dio.post(
         '$baseUrl/insert',
         data: {
+          "tripId": expenseData['tripId'],
           "date": expenseData['date'],
           "category": expenseData['category'],
           "description": expenseData['description'],
@@ -47,7 +51,8 @@ class ExpenseModel {
     }
   }
 
-  Future<List<dynamic>> getExpenses() async {
+  Future<List<dynamic>> getExpenses(BuildContext context) async {
+    dio.interceptors.add(AuthInterceptor(dio, context));
     try {
       final response = await dio.get(baseUrl);
       if (response.statusCode == 200) {
@@ -61,7 +66,8 @@ class ExpenseModel {
     }
   }
 
-  Future<Map<String, dynamic>> getExpensesGroupedByDays(int tripId) async {
+  Future<Map<String, dynamic>> getExpensesGroupedByDays(int tripId, BuildContext context) async {
+    dio.interceptors.add(AuthInterceptor(dio, context));
     try {
       final response = await dio.get('$baseUrl/grouped-by-days/$tripId');
       if (response.statusCode == 200) {
@@ -75,7 +81,8 @@ class ExpenseModel {
     }
   }
 
-  Future<Map<String, dynamic>> getExpenseById(int expenseId) async {
+  Future<Map<String, dynamic>> getExpenseById(int expenseId, BuildContext context) async {
+    dio.interceptors.add(AuthInterceptor(dio, context));
     try {
       final response = await dio.get('$baseUrl/$expenseId');
       if (response.statusCode == 200) {
@@ -89,7 +96,8 @@ class ExpenseModel {
     }
   }
 
-  Future<void> updateExpense(int expenseId, Map<String, dynamic> expenseData) async {
+  Future<void> updateExpense(int expenseId, Map<String, dynamic> expenseData, BuildContext context) async {
+    dio.interceptors.add(AuthInterceptor(dio, context));
     try {
       print('Updating expense data: $expenseData');
       final response = await dio.put(
@@ -131,8 +139,8 @@ class ExpenseModel {
     }
   }
 
-
-  Future<Map<String, dynamic>> getTotalSettlement() async {
+  Future<Map<String, dynamic>> getTotalSettlement(BuildContext context) async {
+    dio.interceptors.add(AuthInterceptor(dio, context));
     try {
       final response = await dio.get('$baseUrl/settlement/total');
       if (response.statusCode == 200) {
@@ -142,6 +150,75 @@ class ExpenseModel {
       }
     } catch (e) {
       print('Error: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
+  Future<void> deleteExpense(int expenseId, BuildContext context) async {
+    dio.interceptors.add(AuthInterceptor(dio, context));
+    try {
+      final response = await dio.delete('$baseUrl/${expenseId}');
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('Expense successfully deleted');
+      } else {
+        throw Exception('Failed to delete expense. Status Code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error updating expense: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getUsersByTripId(int tripId, BuildContext context) async {
+    dio.interceptors.add(AuthInterceptor(dio, context));
+    try {
+      final response = await dio.get('$baseUrl/trip/$tripId/users');
+
+      if (response.statusCode == 200) {
+        return (response.data as List).map((user) {
+          return {
+            'id': user['id'],
+            'nickname': user['nickname'],
+            'profile_pic': user['profile_pic'],
+            'isChecked': false,
+            'isPaid': false,
+          };
+        }).toList();
+      } else {
+        throw Exception('Failed to fetch users for trip');
+      }
+    } catch (e) {
+      print('Error fetching users: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
+  Future<List<dynamic>> getRegionByTripId(int tripId, BuildContext context) async {
+    dio.interceptors.add(AuthInterceptor(dio, context));
+    try {
+      final response = await dio.get('$baseUrl/trip/$tripId/region');
+      if (response.statusCode == 200) {
+        return response.data as List<dynamic>;
+      } else {
+        throw Exception('Failed to fetch region');
+      }
+    } catch (e) {
+      print('Error fetching region: $e');
+      throw Exception('Error: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getTripDetails(int tripId, BuildContext context) async {
+    dio.interceptors.add(AuthInterceptor(dio, context));
+    try {
+      final response = await dio.get('$baseUrl/trip/$tripId/details');
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      } else {
+        throw Exception('Failed to fetch trip details');
+      }
+    } catch(e) {
+      print('Error fetching trip details: $e');
       throw Exception('Error: $e');
     }
   }

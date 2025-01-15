@@ -4,14 +4,27 @@ import java.math.BigDecimal;
 
 public class ExpensePaidByDTO {
     private Integer userId;
+    private String nickname;
+    private String profilePic;
     private BigDecimal amount;
+
 
     public ExpensePaidByDTO() {
     }
 
-    public ExpensePaidByDTO(Integer userId, BigDecimal amount) {
+    public ExpensePaidByDTO(Integer userId, String nickname, String profilePic, BigDecimal amount) {
         this.userId = userId;
+        this.nickname = nickname;
+        this.profilePic = profilePic;
         this.amount = amount;
+    }
+
+    public String getProfilePic() {
+        return profilePic;
+    }
+
+    public void setProfilePic(String profilePic) {
+        this.profilePic = profilePic;
     }
 
     public Integer getUserId() {
@@ -20,6 +33,14 @@ public class ExpensePaidByDTO {
 
     public void setUserId(Integer userId) {
         this.userId = userId;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
     }
 
     public BigDecimal getAmount() {
@@ -34,6 +55,8 @@ public class ExpensePaidByDTO {
     public String toString() {
         return "ExpensePaidByDTO{" +
                 "userId=" + userId +
+                ", nickname='" + nickname + '\'' +
+                ", profilePic='" + profilePic + '\'' +
                 ", amount=" + amount +
                 '}';
     }

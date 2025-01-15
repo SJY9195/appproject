@@ -1,5 +1,6 @@
 package com.ohgiraffers.jenkins_test_app.expense.service;
 
+import com.ohgiraffers.jenkins_test_app.auth.entity.Users;
 import com.ohgiraffers.jenkins_test_app.expense.dto.ExpenseDTO;
 import com.ohgiraffers.jenkins_test_app.expense.dto.ExpensePaidByDTO;
 import com.ohgiraffers.jenkins_test_app.expense.dto.ExpenseParticipantsDTO;
@@ -32,18 +33,30 @@ public class ExpenseService {
     private ExpenseParticipantsRepository participantsRepository;
 
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM.dd/E", Locale.KOREAN);
+
     @Autowired
     private ExpensePaidByRepository expensePaidByRepository;
+
     @Autowired
     private ExpenseParticipantsRepository expenseParticipantsRepository;
 
-    private String formatDate (LocalDate date) {
+    private String formatDate(LocalDate date) {
         return date.format(formatter);
     }
 
     public Map<String, Map<String, Object>> getExpensesGroupedByTripDays(int tripId) {
         List<Object[]> results = expenseRepository.findExpensesGroupedByTripDays(tripId);
         List<Object[]> preparationResults = expenseRepository.findPreparationExpenses(tripId);
+
+        Object[] tripInfo = expenseRepository.findTripDatesByTripId(tripId);
+        Object[] tripDates = (Object[]) tripInfo[0];
+
+        if (tripDates == null || tripDates.length < 2) {
+            throw new RuntimeException("해당 tripId의 여행일정이 제대로 설정 안되었습니다: " + tripId);
+        }
+
+        LocalDate startDate = LocalDate.parse(tripDates[0].toString());
+        LocalDate endDate = LocalDate.parse(tripDates[1].toString());
 
         Map<String, Map<String, Object>> groupedExpenses = new LinkedHashMap<>();
 
@@ -55,6 +68,7 @@ public class ExpenseService {
 
         // 여행 준비 항목
         List<Map<String, Object>> preparationList = (List<Map<String, Object>>) preparationExpenses.get("expenses");
+
         for (Object[] row : preparationResults) {
             String category = (String) row[0];
             double amount = ((Number) row[1]).doubleValue();
@@ -66,20 +80,43 @@ public class ExpenseService {
             expense.put("amount", amount);
             expense.put("description", description);
 
+            int expenseId = ((Number) row[3]).intValue();
+            List<Map<String, Object>> participantsUser = participantsRepository.findParticipantsWithNickname(expenseId)
+                    .stream()
+                    .map(participant -> {
+                        Map<String, Object> participantMap = new HashMap<>();
+                        participantMap.put("id", participant[0]); // userId
+                        participantMap.put("nickname", participant[1]); // 닉네임
+                        return participantMap;
+                    }).collect(Collectors.toList());
+            expense.put("participants", participantsUser);
+
             preparationList.add(expense);
         }
 
+        // 여행 날짜 생성
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            int dayNumber = (int) startDate.until(date).getDays() + 1;
+            String dayKey = "day" + dayNumber;
+            String formattedDate = dayKey + " " + formatDate(date);
+
+            groupedExpenses.putIfAbsent(dayKey, new LinkedHashMap<>());
+            Map<String, Object> dayExpenses = groupedExpenses.get(dayKey);
+            dayExpenses.putIfAbsent("date", formattedDate);
+            dayExpenses.putIfAbsent("expenses", new ArrayList<Map<String, Object>>());
+        }
 
         for (Object[] row : results) {
             int dayNumber = ((Number) row[0]).intValue();
             LocalDate date = ((java.sql.Date) row[1]).toLocalDate();
-            String formattedDate = formatDate(date);
 
             String category = (String) row[2];
             double amount = ((Number) row[3]).doubleValue();
             String description = (String) row[4];
 
             String dayKey = "day" + dayNumber;
+            String formattedDate = dayKey + " " + formatDate(date);
+
             groupedExpenses.putIfAbsent(dayKey, new LinkedHashMap<>());
             Map<String, Object> dayExpenses = groupedExpenses.get(dayKey);
 
@@ -92,6 +129,17 @@ public class ExpenseService {
             expense.put("amount", amount);
             expense.put("description", description);
 
+            int expenseId = ((Number) row[5]).intValue();
+            List<Map<String, Object>> participantsUser = participantsRepository.findParticipantsWithNickname(expenseId)
+                    .stream()
+                    .map(participant -> {
+                        Map<String, Object> participantMap = new HashMap<>();
+                        participantMap.put("id", participant[0]); // userId
+                        participantMap.put("nickname", participant[1]); // 닉네임
+                        return participantMap;
+                    }).collect(Collectors.toList());
+            expense.put("participants", participantsUser);
+
             expenses.add(expense);
             dayExpenses.put("expenses", expenses);
         }
@@ -102,15 +150,21 @@ public class ExpenseService {
     public Expense saveExpenseWithDetails(
             Expense expense,
             List<Map<String, Object>> paidByDetails,
-            List<Map<String, Object>> participantDetails){
+            List<Map<String, Object>> participantDetails) {
 
         Expense savedExpense = expenseRepository.save(expense);
 
         if (paidByDetails != null) {
             for (Map<String, Object> detail : paidByDetails) {
+
                 ExpensePaidBy paidBy = new ExpensePaidBy();
                 paidBy.setExpense(savedExpense);
-                paidBy.setUserId((Integer) detail.get("userId"));
+
+                // Users 엔티티 생성 및 매핑
+                Users user = new Users();
+                user.setId((Integer) detail.get("userId"));
+                paidBy.setUser(user);
+
                 paidBy.setAmount(new BigDecimal(detail.get("amount").toString()));
                 paidByRepository.save(paidBy);
             }
@@ -120,7 +174,12 @@ public class ExpenseService {
             for (Map<String, Object> detail : participantDetails) {
                 ExpenseParticipants participant = new ExpenseParticipants();
                 participant.setExpense(savedExpense);
-                participant.setUserId((Integer) detail.get("userId"));
+
+                // Users 엔티티 생성 및 매핑
+                Users user = new Users();
+                user.setId((Integer) detail.get("userId"));
+                participant.setUser(user);
+
                 participant.setAmount(new BigDecimal(detail.get("amount").toString()));
                 participantsRepository.save(participant);
             }
@@ -128,24 +187,34 @@ public class ExpenseService {
         return savedExpense;
     }
 
+
     public ExpenseDTO getExpenseById(int expenseId) {
         Expense expense = expenseRepository.findById(expenseId)
                 .orElseThrow(() -> new RuntimeException("Expense not found"));
 
-        List<ExpensePaidByDTO> paidByUsers = expensePaidByRepository.findByExpenseId(expenseId)
+
+        List<ExpensePaidByDTO> paidByUsers = paidByRepository.findPaidByUsersWithNickname(expenseId)
                 .stream()
-                .map(paidBy -> new ExpensePaidByDTO(paidBy.getUserId(), paidBy.getAmount()))
+                .map(row -> new ExpensePaidByDTO(
+                        (Integer) row[0],
+                        (String) row[1],
+                        (String) row[2],
+                        (BigDecimal) row[3]
+                ))
                 .collect(Collectors.toList());
 
-        List<ExpenseParticipantsDTO> participants = expenseParticipantsRepository.findByExpenseId(expenseId)
+        List<ExpenseParticipantsDTO> participants = participantsRepository.findParticipantsWithNickname(expenseId)
                 .stream()
-                .map(participant -> new ExpenseParticipantsDTO(participant.getUserId(), participant.getAmount()))
+                .map(row -> new ExpenseParticipantsDTO(
+                        (Integer) row[0],
+                        (String) row[1],
+                        (BigDecimal) row[2]
+                ))
                 .collect(Collectors.toList());
 
-        ExpenseDTO expenseDTO = new ExpenseDTO(expense, paidByUsers, participants);
-        expenseDTO.setId(expense.getId());
-        return expenseDTO;
+        return new ExpenseDTO(expense, paidByUsers, participants);
     }
+
 
     @Transactional
     public void updateExpense(int expenseId, ExpenseDTO expenseDTO) {
@@ -165,7 +234,11 @@ public class ExpenseService {
         for (ExpensePaidByDTO paidByDTO : expenseDTO.getPaidByUsers()) {
             ExpensePaidBy paidBy = new ExpensePaidBy();
             paidBy.setExpense(expense);
-            paidBy.setUserId(paidByDTO.getUserId());
+
+            Users user = new Users();
+            user.setId(paidByDTO.getUserId());
+            paidBy.setUser(user);
+
             paidBy.setAmount(paidByDTO.getAmount());
             expensePaidByRepository.save(paidBy);
         }
@@ -175,10 +248,69 @@ public class ExpenseService {
         for (ExpenseParticipantsDTO participantDTO : expenseDTO.getParticipants()) {
             ExpenseParticipants participant = new ExpenseParticipants();
             participant.setExpense(expense);
-            participant.setUserId(participantDTO.getUserId());
+
+            Users user = new Users();
+            user.setId(participantDTO.getUserId());
+            participant.setUser(user);
+
             participant.setAmount(participantDTO.getAmount());
             expenseParticipantsRepository.save(participant);
         }
     }
 
+    public List<Map<String, Object>> getUsersByTripId(int tripId) {
+        List<Object[]> results = expenseRepository.findUsersAndTripByTripId(tripId);
+        return results.stream().map(row -> {
+            Map<String, Object> user = new HashMap<>();
+            user.put("id", row[0]); // userId
+            user.put("nickname", row[1]); // 닉네임
+            return user;
+        }).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void deleteExpense(int expenseId) {
+        try {
+            // 1. expense_paid_by 테이블에서 참조 레코드 삭제
+            expensePaidByRepository.deleteByExpenseId(expenseId);
+
+            // 2. expense_participants 테이블에서 참조 레코드 삭제
+            expenseParticipantsRepository.deleteByExpenseId(expenseId);
+
+            // 3. expense 테이블에서 레코드 삭제
+            Expense expense = expenseRepository.findById(expenseId)
+                    .orElseThrow(() -> new RuntimeException("Expense not found"));
+
+            expenseRepository.delete(expense);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete expense: " + e.getMessage());
+        }
+    }
+
+    public List<Object[]> getRegionByTripId(int tripId) {
+        return expenseRepository.findTripIdAndRegionByTripId(tripId);
+    }
+
+    public Map<String, Object> getTripDetails(int tripId) {
+        List<Object[]> region = expenseRepository.findTripIdAndRegionByTripId(tripId);
+        Object[] tripInfo = expenseRepository.findTripDatesByTripId(tripId);
+
+        System.out.println("TripInfo for tripId " + tripId + ": " + Arrays.deepToString(new Object[]{tripInfo}));
+
+        if (tripInfo == null || tripInfo.length == 0 || !(tripInfo[0] instanceof Object[])) {
+            throw new RuntimeException("Trip details not found for tripId: " + tripId);
+        }
+
+        Object[] tripDates = (Object[]) tripInfo[0];
+
+        if (tripDates.length < 2) {
+            throw new RuntimeException("Incomplete trip dates for tripId: " + tripId);
+        }
+
+        Map<String, Object> tripDetails = new HashMap<>();
+        tripDetails.put("startDate", tripDates[0].toString());
+        tripDetails.put("endDate", tripDates[1].toString());
+        tripDetails.put("region", region.stream().map(row -> row[0]).collect(Collectors.toList()));
+        return tripDetails;
+    }
 }
